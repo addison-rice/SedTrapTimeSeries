@@ -1,0 +1,225 @@
+---
+title: "Sed-Trap-Plots"
+author: "AR"
+date: "7/4/2022"
+output: html_notebook
+---
+
+Libraries
+
+```{r}
+library(tidyverse)
+library(ncdf4)
+library(gridExtra)
+library(RColorBrewer)
+library(cowplot)
+library(ggbreak)
+```
+
+Function for line+scatter plot that will give different colors based on the depth variable
+
+```{r}
+line_scatter_plot <- function(dataset, point_measurement, line_measurement, y_label, depth_values = c("Satellite SST", "500 m","1500 m","2500 m"), time_range = as.Date(c("1991-8-1","2011-6-1")), time_breaks = c(c("2006-9-1", "2008-9-1"), c("1993-12-1","1999-1-1")), figname = ""){
+  nice_plot <- dataset %>%
+    mutate(Value = as.numeric(Value)) %>%
+    ggplot(aes(x = mid_date,
+               y = Value,
+               color = Depth.category)) +
+    geom_point(data = subset(drop_na(all_data), Measurement == point_measurement)) +
+    geom_line(data = subset(all_data, Measurement == line_measurement)) +
+    scale_color_discrete(breaks= depth_values) +
+    ylab(y_label) +
+    theme(axis.title.x = element_blank()) +
+    scale_x_date(limits = time_range, date_labels="%Y",date_breaks  ="1 year") +
+    #scale_y_continuous(sec.axis = sec_axis(~ .*0.034+0.039,name = "UK37")) +
+    scale_x_break(time_breaks)
+  
+  if(figname != ""){
+    ggsave(figname, nice_plot, width = 8, height = 3)
+  }
+
+  return(nice_plot)
+}
+```
+
+```{r}
+line_scatter_plot_depth <- function(dataset, point_measurement, line_measurement, y_label, depth_values = c("Model temp. 42m", "500m","1500m","2500m"), time_range = as.Date(c("1991-8-1","2011-6-1")), time_breaks = c(c("2006-9-1", "2008-9-1"), c("1993-12-1","1999-1-1")), figname = ""){
+  nice_plot <- dataset %>%
+    mutate(Value = as.numeric(Value)) %>%
+    ggplot(aes(x = mid_date,
+               y = Value,
+               color = Depth.category)) +
+    geom_point(data = subset(drop_na(all_data), Measurement == point_measurement)) +
+    geom_line(data = subset(all_data, Measurement == line_measurement)) +
+    scale_color_discrete(breaks= depth_values) +
+    ylab(y_label) +
+    theme(axis.title.x = element_blank()) +
+    scale_x_date(limits = time_range, date_labels="%Y",date_breaks  ="1 year") +
+    #scale_y_continuous(sec.axis = sec_axis(~ .*0.034+0.039,name = "UK37")) +
+    scale_x_break(time_breaks)
+  
+  if(figname != ""){
+    ggsave(figname, nice_plot, width = 8, height = 3)
+  }
+
+  return(nice_plot)
+}
+```
+
+Function for stacked bar plot to plot fluxes
+
+```{r}
+stacked_bar_plot <- function(dataset, measurements, y_label, stacked_colors, depth_value, time_range = as.Date(c("1991-8-1","2011-6-1")), time_breaks = c(c("2006-9-1", "2008-9-1"), c("1993-12-1","1999-1-1")), figname = ""){
+  nice_little_plot <- filter(dataset, Measurement == measurements & Depth.category == depth_value) %>%
+    ggplot(aes(x = mid_date,
+               y = Value,
+               fill = Measurement)) +
+    geom_bar(position = "stack", stat = "identity") +
+    ylab(y_label) +
+    theme(axis.title.x = element_blank()) +
+    scale_x_date(limits = time_range, date_labels="%Y",date_breaks  ="1 year") +
+    scale_fill_manual(values = stacked_colors)  +
+    scale_x_break(time_breaks)
+  
+  if(figname != ""){
+    ggsave(figname, nice_little_plot, width = 8, height = 3)
+  }
+    
+  return(nice_little_plot)
+}
+```
+
+Grab the data
+
+```{r}
+trap_data <- read.csv('../data/raw/results_csv.csv', stringsAsFactors=FALSE)
+temp_depth42m <- read.csv('../data/processed/temp_bb_42m.csv')
+
+sat_sst_bb_nc <- nc_open("../data/raw/Satellite_data/sst_bb.nc")
+sat_sst_bb <- as.data.frame(cbind(sat_sst_bb_time = ncvar_get(sat_sst_bb_nc,"time"),
+                                  sat_sst_bb_temp = ncvar_get(sat_sst_bb_nc, "analysed_sst") - 273.15))
+nc_close(sat_sst_bb_nc)
+```
+
+Make the dates work, get the data into tidy format, and remove NA values
+
+```{r}
+sat_sst_bb <- sat_sst_bb %>%
+  mutate(Sample = paste("SST_BB_", as.character.Date(sat_sst_bb_time)),
+         mid_date = as.Date(sat_sst_bb_time, origin = "1991-1-1"),
+         Start.date = as.Date(sat_sst_bb_time, origin = "1991-1-1"),
+         End.date = as.Date(sat_sst_bb_time, origin = "1991-1-1"),
+         offset_date = mid_date,
+         Depth.category = "Satellite SST",
+         Measurement = "Sat_SST",
+         Value = sat_sst_bb_temp) %>%
+  select(c(Sample, Depth.category, Start.date, End.date, mid_date, offset_date, Measurement, Value))
+
+trap_data <- trap_data %>%
+  mutate(Start.date = as.Date(Start.date), # format = "%m/%d/%Y"
+         End.date = as.Date(End.date),
+         mid_date = Start.date + floor((End.date - Start.date)/2),
+         offset_date = mid_date - 45)
+
+temp_depth42m <- temp_depth42m %>%
+  mutate(Sample = paste("Model_data_42m_", as.character.Date(time_data)),
+         mid_date = as.Date(time_data),
+         Start.date = as.Date(time_data),
+         End.date = as.Date(time_data),
+         offset_date = mid_date,
+         Depth.category = "Model temp. 42m",
+         Measurement = "Model_temp_42",
+         Value = pot_temp) %>%
+  select(c(Sample, Depth.category, Start.date, End.date, mid_date, offset_date, Measurement, Value))
+
+numeric_cols <- c("Depth", "MassFlux_mg_m.2_d.1", "OC.Flux", "d13C", "UK37", "SST.UK37", "X.37.3.", "X.37.2.", "Flux37.3", "Flux37.2")
+
+all_data <- trap_data %>%
+  mutate(across(numeric_cols, as.numeric)) %>%
+  pivot_longer(!c(Sample, Depth.category, Start.date, End.date, mid_date, offset_date, Alkenone.flag), 
+               names_to = "Measurement", 
+               values_to = "Value") %>%
+  select(c(Sample, Depth.category, Start.date, End.date, mid_date, offset_date, Measurement, Value))
+
+all_data <- subset(all_data, !is.na(as.numeric(as.character(Value))))
+all_data <- rbind(all_data, sat_sst_bb, temp_depth42m) %>%
+  mutate(Value = as.numeric(Value)) %>%
+  mutate(Depth.category=factor(Depth.category, levels = c("Satellite SST", "500 m","1500 m","2500 m")))
+```
+
+Plot alkenone and SST data
+
+```{r}
+alkenone_plot <- line_scatter_plot(all_data, "SST.UK37", "Sat_SST", "SST", figname = "../results/figures/alkenone-sat-sst.pdf")
+
+alkenone_plot
+```
+
+```{r}
+alkenone_plot_42m <- line_scatter_plot_depth(all_data, "SST.UK37", "Model_temp_42", "Temp.", figname = "../results/figures/alkenone-42m-temp.pdf")
+
+alkenone_plot_42m
+```
+
+Define the colors for alkenone fluxes at depth and plot those fluxes
+
+```{r}
+colors_500m <- c("#AAEAEB","#00BFC4")
+colors_1500m <- brewer.pal(8,"Paired")[7:8]
+colors_2500m <- brewer.pal(8,"Paired")[3:4]
+
+alkenone_flux_500m <- stacked_bar_plot(all_data, c("Flux37.3", "Flux37.2"), "Alkenone flux (ug/m2/d)", colors_500m, "500 m", figname = "../results/figures/alkenone-flux-500m.pdf")
+
+alkenone_flux_1500m <- stacked_bar_plot(all_data, c("Flux37.3", "Flux37.2"), "Alkenone flux (ug/m2/d)", colors_1500m, "1500 m", figname = "../results/figures/alkenone-flux-1500m.pdf")
+
+alkenone_flux_2500m <- stacked_bar_plot(all_data, c("Flux37.3", "Flux37.2"), "Alkenone flux (ug/m2/d)", colors_2500m, "2500 m", figname = "../results/figures/alkenone-flux-2500m.pdf")
+
+alkenone_flux_500m
+```
+
+Plot the total mass fluxes
+
+```{r}
+mass_flux_500m <- stacked_bar_plot(all_data, c("MassFlux_mg_m.2_d.1"), "Mass flux (mg/m2/d)", "#00BFC4", "500 m", figname = "../results/figures/mass-flux-500m.pdf")
+mass_flux_1500m <- stacked_bar_plot(all_data, c("MassFlux_mg_m.2_d.1"), "Mass flux (mg/m2/d)", brewer.pal(8,"Paired")[8], "1500 m", figname = "../results/figures/mass-flux-1500m.pdf")
+mass_flux_2500m <- stacked_bar_plot(all_data, c("MassFlux_mg_m.2_d.1"), "Mass flux (mg/m2/d)", brewer.pal(8,"Paired")[4], "2500 m", figname = "../results/figures/mass-flux-2500m.pdf")
+
+mass_flux_1500m
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

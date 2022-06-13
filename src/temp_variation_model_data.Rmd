@@ -1,0 +1,122 @@
+---
+title: "Temperature variation over time"
+output: html_notebook
+---
+
+
+
+```{r}
+library(tidyverse)
+library(ncdf4)
+library(RColorBrewer)
+library(ggbreak)
+library(cmocean)
+```
+
+import the nc file
+
+```{r}
+pot_temp_nc <- nc_open("../data/raw/Model_data/med-cmcc-tem-rean-m_1652196115726.nc")
+
+
+# This code prints out the information for the nc file - check the txt file for variable names
+# sink("../data/raw/Model_data/desc_pot_temp.txt")
+# print(pot_temp_nc)
+# sink()
+```
+
+```{r}
+pot_temp_time <- ncvar_get(pot_temp_nc, "time")
+pot_temp_lat <- ncvar_get(pot_temp_nc, "lat")
+pot_temp_lon <- ncvar_get(pot_temp_nc, "lon")
+pot_temp_depth <- ncvar_get(pot_temp_nc, "depth")
+pot_temp_thetao <- ncvar_get(pot_temp_nc, "thetao")
+
+# bb_coord <- cbind(20.02, 34.3) # lon and lat for BB
+### closest coordinates are 20.00000, 34.31250 
+# extract_bb <- extract(pot_temp_df, bb_coord, method = "simple")
+```
+
+convert dates
+```{r}
+pot_temp_time <- as.data.frame(pot_temp_time) %>%
+  mutate(pot_temp_time = as.Date(as.POSIXct(pot_temp_time*60, origin = "1900-01-01 00:00:00")), "GMT")
+```
+
+
+```{r}
+pot_temp_bb <- as.data.frame(pot_temp_thetao[25,8,1:57,]) %>%
+   rownames_to_column("depth_interval") %>%
+   pivot_longer(c("V1":"V401"), values_to = "pot_temp", names_to = "time_interval") %>%
+   mutate(depth = as.numeric(pot_temp_depth[as.numeric(depth_interval)]),
+          time_interval = as.numeric(substring(time_interval, 2)),
+          time_data = pot_temp_time$pot_temp_time[time_interval])
+
+```
+
+Contour plot - but this interpolates between time slices
+
+```{r}
+temp_time_depth_plot <- pot_temp_bb %>%
+  ggplot(aes(x = time_data,
+             y = depth,
+             z = pot_temp)) +
+  geom_contour_filled(bins = 30) +
+  scale_y_reverse(limits = c(200,0)) +
+  scale_x_date(limits = as.Date(c("1999-01-01","2012-01-01"))) +
+  scale_x_break(c("2006-9-1", "2008-9-1")) +
+  scale_fill_cmocean(discrete = TRUE, name = "thermal") +
+  theme_classic()
+
+temp_time_depth_plot
+
+ggsave("../results/figures/potential_temp_evolution.jpg")
+```
+
+line plots for different depths
+
+```{r}
+temp_over_time_plot <- pot_temp_bb %>%
+  ggplot(aes(x = time_data,
+             y = pot_temp,
+             color = as.factor(pot_temp_bb$depth))) +
+  geom_line() +
+  scale_x_date(limits = as.Date(c("1999-01-01","2012-01-01"))) +
+  scale_x_break(c("2006-9-1", "2008-9-1")) +
+  scale_color_cmocean(discrete = TRUE, name = "deep")
+
+temp_over_time_plot
+```
+
+
+Extract depth level 14
+```{r}
+temp_depth14 <- subset(pot_temp_bb, depth_interval == 14)
+
+write.csv(temp_depth14, file = '../data/processed/temp_bb_42m.csv', row.names = FALSE)
+```
+
+
+
+
+Jingjing's contours
+```{r}
+test_data <- read_csv('../data/Contour_map.csv')
+
+x_grid = 102:110
+y_grid = 34:38
+
+pts.grid <- akima::interp(x = test_data$x_longi, y = test_data$y_lati, z = test_data$temp_bin)
+pts.grid2 <- expand.grid(x=pts.grid$x, y=pts.grid$y)
+pts.grid2$z <- as.vector(pts.grid$z)
+
+
+test_plot <- as.data.frame(pts.grid) %>%
+  ggplot(aes(x = x,
+         y = y,
+         z = z$V1)) +
+  geom_contour_filled()
+  
+test_plot
+```
+

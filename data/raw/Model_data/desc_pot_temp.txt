@@ -1,0 +1,69 @@
+File ../data/raw/Model_data/med-cmcc-tem-rean-m_1652196115726.nc (NC_FORMAT_CLASSIC):
+
+     1 variables (excluding dimension variables):
+        float thetao[lon,lat,depth,time]   
+            _FillValue: 1.00000002004088e+20
+            units: degrees_C
+            standard_name: sea_water_potential_temperature
+            long_name: potential temperature
+            coordinates: time depth lat lon
+            missing_value: 1.00000002004088e+20
+            _ChunkSizes: 1
+             _ChunkSizes: 36
+             _ChunkSizes: 95
+             _ChunkSizes: 254
+
+     4 dimensions:
+        time  Size:401
+            units: minutes since 1900-01-01 00:00:00
+            standard_name: time
+            long_name: time
+            axis: T
+            calendar: standard
+            _ChunkSizes: 1
+            _CoordinateAxisType: Time
+            valid_min: 45779760
+            valid_max: 63310320
+        depth  Size:141
+            units: m
+            standard_name: depth
+            long_name: depth
+            axis: Z
+            positive: down
+            _ChunkSizes: 141
+            _CoordinateAxisType: Height
+            _CoordinateZisPositive: down
+            valid_min: 1.01823663711548
+            valid_max: 5754.0439453125
+        lat  Size:49
+            units: degrees_north
+            standard_name: latitude
+            long_name: latitude
+            axis: Y
+            _ChunkSizes: 380
+            _CoordinateAxisType: Lat
+            valid_min: 34.0208320617676
+            valid_max: 36.0208320617676
+        lon  Size:73
+            units: degrees_east
+            standard_name: longitude
+            long_name: longitude
+            axis: X
+            _ChunkSizes: 1016
+            _CoordinateAxisType: Lon
+            valid_min: 19
+            valid_max: 22
+
+    12 global attributes:
+        source: MFS E3R1
+        institution: Centro Euro-Mediterraneo sui Cambiamenti Climatici - CMCC, Italy
+        contact: servicedesk.cmems@mercator-ocean.eu
+        references: Please check in CMEMS catalogue the INFO section for product MEDSEA_MULTIYEAR_PHY_006_004 - http://marine.copernicus.eu 
+        comment: Please check in CMEMS catalogue the INFO section for product MEDSEA_MULTIYEAR_PHY_006_004 - http://marine.copernicus.eu 
+        Conventions: CF-1.0
+        bulletin_type: reanalysis
+        bulletin_date: 20200901
+        FROM_ORIGINAL_FILE__field_type: monthly_mean_centered_at_time_field
+        title: Potential Temperature (3D) - Monthly Mean
+        _CoordSysBuilder: ucar.nc2.dataset.conv.CF1Convention
+        history: Data extracted from dataset http://localhost:8080/thredds/dodsC/med-cmcc-tem-rean-m

@@ -1,0 +1,67 @@
+---
+title: "Sediment trap timings"
+output: html_notebook
+---
+
+
+
+```{r}
+library(tidyverse)
+library(RColorBrewer)
+```
+
+Import the data
+
+```{r}
+SedTrapTimingOverview <- read_csv("../data/raw/SedTrapTimingOverview.csv", 
+    col_types = cols(Depth_category = col_factor(levels = c("500", 
+        "1500", "2500", "3500")), End = col_date(format = "%m/%d/%Y"), 
+        Start = col_date(format = "%m/%d/%Y")))
+```
+
+Plot it up
+
+```{r}
+trap_timings <- SedTrapTimingOverview %>%
+  ggplot(aes(x = Start, y = Depth, xend = End, yend = Depth, color = Location)) +
+  geom_segment(size = 8) +
+  scale_x_date(name = "Date",
+               date_labels="%Y",
+               date_breaks  ="2 years") +
+  scale_y_reverse(name = "Depth (m)",
+                  limits = c(3200,300),
+                  breaks = c(2500,1500,500),
+                  labels = c(2500,1500,500)) +
+  theme_light() + theme(panel.grid.minor = element_blank())
+
+
+trap_timings
+```
+
+
+save it!
+```{r}
+ggsave("../results/figures/trap_timings_actual_depth.jpg",width = 10, height = 5)
+```
+
+add texture where the OG samples have been processed
+
+```{r}
+processed_samples <- trap_timings +
+  geom_segment(aes(x = Start, y = Depth_plot, xend = End, yend = Depth_plot, size = OG_processed), color = "black") +
+  guides(size = FALSE)
+
+processed_samples
+  
+```
+
+
+
+save it!
+```{r}
+ggsave("trap_timings_OG.jpg",width = 10, height = 5)
+```
+
+
+
+
